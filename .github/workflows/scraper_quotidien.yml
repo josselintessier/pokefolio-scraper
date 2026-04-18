@@ -1,0 +1,31 @@
+name: PokéFolio — Scraper prix quotidien
+
+on:
+  schedule:
+    # Tous les jours à 5h00 UTC (7h heure FR)
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    # Lancement manuel depuis GitHub → Actions → Run workflow
+
+jobs:
+  scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installer les dépendances
+        run: pip install requests supabase
+
+      - name: Lancer le scraper
+        env:
+          TCGGO_API_KEY:      ${{ secrets.TCGGO_API_KEY }}
+          SUPABASE_URL_STATS: ${{ secrets.SUPABASE_URL_STATS }}
+          SUPABASE_KEY_STATS: ${{ secrets.SUPABASE_KEY_STATS }}
+        run: python scraper_intelligent.py
