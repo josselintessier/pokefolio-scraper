@@ -27,7 +27,7 @@ API_BASE      = f"https://{RAPIDAPI_HOST}"
 SUPABASE_URL  = os.environ.get("SUPABASE_URL_STATS", "")
 SUPABASE_KEY  = os.environ.get("SUPABASE_KEY_STATS", "")
 
-BUDGET_TOTAL = 60
+BUDGET_TOTAL = 30
 DELAI_APPELS = 2
 
 HEADERS = {
@@ -340,14 +340,32 @@ def main():
         return
 
     # ---- Étape 1 : Liste des éditions (1 appel) ----
-    print(f"\n[1/3] Détection des éditions...")
-    data = appel_api("pokemon/episodes")
-    if not data:
-        print("Erreur API — arrêt")
-        return
+    print(f"\n[1/3] Détection des éditions (toutes pages)...")
+    episodes = []
+    page     = 1
 
-    episodes = [e for e in data.get("data", []) if e.get("id") and e.get("name")]
-    print(f"  {len(episodes)} éditions trouvées via l'API")
+    while True:
+        if appels_effectues >= BUDGET_TOTAL - 1:
+            print(f"  Budget atteint pendant la pagination — arrêt à la page {page - 1}")
+            break
+
+        data = appel_api("pokemon/episodes", {"page": page})
+        if not data:
+            print(f"  Erreur API page {page} — arrêt pagination")
+            break
+
+        items       = [e for e in data.get("data", []) if e.get("id") and e.get("name")]
+        paging      = data.get("paging", {})
+        total_pages = paging.get("total", 1)
+
+        episodes.extend(items)
+        print(f"  Page {page}/{total_pages} — {len(items)} éditions ({appels_effectues}/{BUDGET_TOTAL} appels)")
+
+        if page >= total_pages:
+            break
+        page += 1
+
+    print(f"  Total : {len(episodes)} éditions récupérées sur {page} page(s)")
 
     episodes_en_base = get_episodes_en_base(sb)
     nouveaux = [e for e in episodes if str(e["id"]) not in episodes_en_base]
