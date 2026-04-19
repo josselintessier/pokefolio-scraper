@@ -1,14 +1,9 @@
 """
-PokéFolio — Scraper intelligent v2
+PokéFolio — Scraper intelligent v3
 ====================================
 API : cardmarket-api-tcg.p.rapidapi.com
 Budget : 60 appels/jour
-
-Stratégie :
-  Appel 1  → GET /pokemon/episodes (liste toutes les éditions)
-  Appels 2+ → GET /pokemon/episodes/{id}/products (produits scellés)
-
-1 appel par édition = tous ses produits scellés avec prix FR, 7j, 30j
+Fix : duplicate key sur produits_catalogue
 """
 
 import os
@@ -18,18 +13,13 @@ import requests
 from datetime import date, datetime
 from supabase import create_client
 
-# ============================================================
-#  Configuration
-# ============================================================
 RAPIDAPI_KEY  = os.environ.get("TCGGO_API_KEY", "")
 RAPIDAPI_HOST = "cardmarket-api-tcg.p.rapidapi.com"
 API_BASE      = f"https://{RAPIDAPI_HOST}"
-
 SUPABASE_URL  = os.environ.get("SUPABASE_URL_STATS", "")
 SUPABASE_KEY  = os.environ.get("SUPABASE_KEY_STATS", "")
-
-BUDGET_TOTAL = 30
-DELAI_APPELS = 2
+BUDGET_TOTAL  = 60
+DELAI_APPELS  = 2
 
 HEADERS = {
     "Content-Type":    "application/json",
@@ -37,9 +27,6 @@ HEADERS = {
     "x-rapidapi-key":  RAPIDAPI_KEY,
 }
 
-# ============================================================
-#  Mapping EN → FR
-# ============================================================
 NOMS_FR = {
     "Mega Evolution": "Méga-Évolution", "Phantasmal Flames": "Flammes Fantasmagoriques",
     "Ascended Heroes": "Héros Ascendants", "Perfect Order": "Ordre Parfait",
@@ -62,16 +49,10 @@ NOMS_FR = {
 }
 
 SERIES_FR = {
-    "Scarlet & Violet": "Écarlate-Violet",
-    "Sword & Shield":   "Épée-Bouclier",
-    "Mega Evolution":   "Méga-Évolution",
-    "Sun & Moon":       "Soleil-Lune",
-    "XY":               "XY",
+    "Scarlet & Violet": "Écarlate-Violet", "Sword & Shield": "Épée-Bouclier",
+    "Mega Evolution": "Méga-Évolution", "Sun & Moon": "Soleil-Lune", "XY": "XY",
 }
 
-# ============================================================
-#  Helpers
-# ============================================================
 def get_print_status(released_at_str):
     if not released_at_str:
         return "en_impression"
@@ -85,21 +66,18 @@ def get_print_status(released_at_str):
     except:
         return "en_impression"
 
-def detecter_type_produit(nom):
+def detecter_type(nom):
     n = nom.lower()
-    if "display" in n:                               return "display_36"
-    elif "elite trainer box" in n or "etb" in n:     return "etb"
+    if "display" in n:                                return "display_36"
+    elif "elite trainer box" in n or "etb" in n:      return "etb"
     elif "ultra-premium" in n or "ultra premium" in n: return "coffret"
-    elif "bundle" in n:                              return "bundle"
-    elif "tin" in n:                                 return "tin"
-    elif "blister" in n or "tripack" in n:           return "blister"
-    elif "booster" in n:                             return "booster_unitaire"
-    elif "collection" in n:                          return "coffret"
-    else:                                            return "autre"
+    elif "bundle" in n:                               return "bundle"
+    elif "tin" in n:                                  return "tin"
+    elif "blister" in n or "tripack" in n:            return "blister"
+    elif "booster" in n:                              return "booster_unitaire"
+    elif "collection" in n:                           return "coffret"
+    else:                                             return "autre"
 
-# ============================================================
-#  Appels API
-# ============================================================
 appels_effectues = 0
 
 def appel_api(endpoint, params=None):
@@ -122,9 +100,6 @@ def appel_api(endpoint, params=None):
         appels_effectues += 1
         return None
 
-# ============================================================
-#  Supabase
-# ============================================================
 def get_sb():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -162,7 +137,6 @@ def sauvegarder_etat(sb, etat):
         print(f"  Erreur sauvegarde état: {e}")
 
 def get_dernieres_maj(sb):
-    """Dernière MAJ par episode_id depuis prix_historique."""
     try:
         r = sb.table("prix_historique").select(
             "episode_id, date_releve"
@@ -176,11 +150,24 @@ def get_dernieres_maj(sb):
     except:
         return {}
 
-def inserer_produits_episode(sb, episode_api, produits):
-    """Insère tous les produits d'une édition et leurs prix."""
-    nom_en    = episode_api.get("name", "")
-    serie_en  = (episode_api.get("series") or {}).get("name", "")
-    episode_id = episode_api["id"]
+def upsert_produit(sb, data):
+    """Upsert propre sans erreur duplicate key."""
+    cm_id = data["cardmarket_id"]
+    try:
+        existant = sb.table("produits_catalogue").select("cardmarket_id").eq("cardmarket_id", cm_id).execute()
+        if existant.data:
+            sb.table("produits_catalogue").update(data).eq("cardmarket_id", cm_id).execute()
+        else:
+            sb.table("produits_catalogue").insert(data).execute()
+        return True
+    except Exception as e:
+        print(f"    Erreur produit {cm_id}: {e}")
+        return False
+
+def inserer_produits_episode(sb, episode, produits):
+    nom_en    = episode.get("name", "")
+    serie_en  = (episode.get("series") or {}).get("name", "")
+    episode_id = episode["id"]
     nb_ok = 0
 
     for prod in produits:
@@ -188,32 +175,29 @@ def inserer_produits_episode(sb, episode_api, produits):
         if not cm_id:
             continue
 
-        prix = prod.get("prices", {}).get("cardmarket", {})
+        prix     = prod.get("prices", {}).get("cardmarket", {})
         prix_fr  = prix.get("lowest_FR")
         avg_30j  = prix.get("30d_average")
         avg_7j   = prix.get("7d_average")
         prix_min = prix.get("lowest")
 
-        # Upsert produit
-        try:
-            sb.table("produits_catalogue").upsert({
-                "cardmarket_id":    cm_id,
-                "episode_id":       episode_id,
-                "nom_fr":           prod.get("name", ""),
-                "edition_code":     episode_api.get("code", ""),
-                "edition_nom":      NOMS_FR.get(nom_en, nom_en),
-                "serie":            SERIES_FR.get(serie_en, serie_en),
-                "type_produit":     detecter_type_produit(prod.get("name", "")),
-                "langue":           "FR",
-                "date_sortie_fr":   episode_api.get("released_at"),
-                "print_run_status": get_print_status(episode_api.get("released_at", "")),
-                "slug":             prod.get("slug", ""),
-            }).execute()
-        except Exception as e:
-            print(f"    Erreur upsert produit {cm_id}: {e}")
+        ok = upsert_produit(sb, {
+            "cardmarket_id":    cm_id,
+            "episode_id":       episode_id,
+            "nom_fr":           prod.get("name", ""),
+            "edition_code":     episode.get("code", ""),
+            "edition_nom":      NOMS_FR.get(nom_en, nom_en),
+            "serie":            SERIES_FR.get(serie_en, serie_en),
+            "type_produit":     detecter_type(prod.get("name", "")),
+            "langue":           "FR",
+            "date_sortie_fr":   episode.get("released_at"),
+            "print_run_status": get_print_status(episode.get("released_at", "")),
+            "slug":             prod.get("slug", ""),
+        })
+
+        if not ok:
             continue
 
-        # Insérer prix si disponible
         if prix_fr or avg_30j:
             try:
                 sb.table("prix_historique").upsert({
@@ -233,49 +217,41 @@ def inserer_produits_episode(sb, episode_api, produits):
 
     return nb_ok
 
-# ============================================================
-#  Priorités par édition
-# ============================================================
 def score_edition(episode, dernieres_maj):
     eid      = str(episode["id"])
     derniere = dernieres_maj.get(eid)
     score    = 0
-
     if not derniere:
         score += 100
     else:
         try:
             jours = (date.today() - date.fromisoformat(derniere)).days
-            if jours == 0:   return -1  # Déjà faite aujourd'hui
+            if jours == 0:   return -1
             elif jours > 7:  score += 50
             elif jours > 3:  score += 25
             else:            score += 10
         except:
             score += 100
-
     status = get_print_status(episode.get("released_at", ""))
     if status == "en_impression":   score += 30
     elif status == "arret_annonce": score += 20
     else:                           score += 5
-
     if episode.get("prices", {}).get("cardmarket", {}).get("total", 0) > 0:
         score += 10
-
     return score
 
-# ============================================================
-#  Main
-# ============================================================
 def main():
     global appels_effectues
-
     print("=" * 55)
-    print(f"PokéFolio Scraper v2 — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    print("API : cardmarket-api-tcg.p.rapidapi.com")
+    print(f"PokéFolio Scraper v3 — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"API : {RAPIDAPI_HOST}")
     print("=" * 55)
 
     if not RAPIDAPI_KEY or not SUPABASE_URL:
         print("ERREUR : Variables d'environnement manquantes")
+        print(f"  TCGGO_API_KEY     : {'OK' if RAPIDAPI_KEY else 'MANQUANT'}")
+        print(f"  SUPABASE_URL_STATS: {'OK' if SUPABASE_URL else 'MANQUANT'}")
+        print(f"  SUPABASE_KEY_STATS: {'OK' if SUPABASE_KEY else 'MANQUANT'}")
         return
 
     sb   = get_sb()
@@ -289,7 +265,6 @@ def main():
         print("Budget épuisé.")
         return
 
-    # ---- Étape 1 : Liste des éditions (1 appel) ----
     print(f"\n[1/3] Liste des éditions...")
     data = appel_api("pokemon/episodes")
     if not data:
@@ -299,10 +274,8 @@ def main():
     episodes = [e for e in data.get("data", []) if e.get("id") and e.get("name")]
     print(f"  {len(episodes)} éditions trouvées")
 
-    # ---- Étape 2 : Priorités ----
     print(f"\n[2/3] Calcul des priorités...")
-    dernieres_maj = get_dernieres_maj(sb)
-
+    dernieres_maj  = get_dernieres_maj(sb)
     episodes_tries = sorted(episodes, key=lambda e: score_edition(e, dernieres_maj), reverse=True)
 
     print("  Top 5 :")
@@ -312,7 +285,6 @@ def main():
         maj = dernieres_maj.get(str(ep["id"]), "jamais")
         print(f"    [{s:3}pts] {nom[:35]:35} — MAJ: {maj}")
 
-    # ---- Étape 3 : Scraping ----
     budget = BUDGET_TOTAL - appels_effectues
     print(f"\n[3/3] Scraping ({budget - 1} appels dispo)...")
 
@@ -326,15 +298,11 @@ def main():
         s   = score_edition(episode, dernieres_maj)
         nom = NOMS_FR.get(episode["name"], episode["name"])
 
-        if s < 0:
-            ep_skip += 1
-            continue
-        if s <= 3:
+        if s < 0 or s <= 3:
             ep_skip += 1
             continue
 
         print(f"  [{s:3}pts] {nom[:40]}", end=" → ")
-
         data_prod = appel_api(f"pokemon/episodes/{episode['id']}/products",
                               {"sort": "price_highest"})
         if not data_prod:
@@ -353,7 +321,6 @@ def main():
         print(f"{nb}/{len(produits)} prix insérés ✓ ({appels_effectues}/{BUDGET_TOTAL})")
         ep_ok += 1
 
-    # ---- Résumé ----
     print(f"\n{'='*55}")
     print(f"  Éditions traitées : {ep_ok}")
     print(f"  Ignorées          : {ep_skip}")
