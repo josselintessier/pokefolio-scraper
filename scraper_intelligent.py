@@ -27,8 +27,8 @@ API_BASE      = f"https://{RAPIDAPI_HOST}"
 SUPABASE_URL  = os.environ.get("SUPABASE_URL_STATS", "")
 SUPABASE_KEY  = os.environ.get("SUPABASE_KEY_STATS", "")
 
-BUDGET_TOTAL = 40
-DELAI_APPELS = 6
+BUDGET_TOTAL = 60
+DELAI_APPELS = 2
 
 HEADERS = {
     "Content-Type":    "application/json",
@@ -41,18 +41,18 @@ HEADERS = {
 # ============================================================
 NOMS_FR = {
     "Mega Evolution": "Méga-Évolution", "Phantasmal Flames": "Flammes Fantasmagoriques",
-    "Ascended Heroes": "Héros Ascendants", "Perfect Order": "Ordre Parfait",
-    "Chaos Rising": "Chaos Montant", "Paldea Evolved": "Évolutions à Paldea",
+    "Ascended Heroes": "Héros Transcendants", "Perfect Order": "Équilibre Parfait",
+    "Chaos Rising": "Chaos Ascendants", "Paldea Evolved": "Évolutions à Paldea",
     "Obsidian Flames": "Flammes Obsidiennes", "151": "Écarlate et Violet 151",
     "Paradox Rift": "Faille Paradoxe", "Paldean Fates": "Destinée de Paldea",
     "Temporal Forces": "Forces Temporelles", "Twilight Masquerade": "Mascarade Crépusculaire",
-    "Shrouded Fable": "Destins de Paldea", "Stellar Crown": "Couronne Stellaire",
-    "Surging Sparks": "Tempête Argentée", "Prismatic Evolutions": "Évolutions Prismatiques",
+    "Shrouded Fable": "Fable Nébuleuse", "Stellar Crown": "Couronne Stellaire",
+    "Surging Sparks": "Étincelle Déferlante", "Prismatic Evolutions": "Évolutions Prismatiques",
     "Journey Together": "Aventures Ensemble", "Destined Rivals": "Rivalités Destinées",
     "Black Bolt": "Foudre Noire", "White Flare": "Flamme Blanche",
     "Sword & Shield": "Épée et Bouclier", "Rebel Clash": "Clash des Rebelles",
     "Darkness Ablaze": "Ténèbres Embrasées", "Champion's Path": "La Voie du Maître",
-    "Vivid Voltage": "Chants du Tonnerre", "Shining Fates": "Shining Fates",
+    "Vivid Voltage": "Voltage Éclatant", "Shining Fates": "Destinées Radieuses",
     "Battle Styles": "Styles de Combat", "Chilling Reign": "Règne de Glace",
     "Evolving Skies": "Évolution Céleste", "Fusion Strike": "Poing de Fusion",
     "Brilliant Stars": "Étoiles Brillantes", "Astral Radiance": "Astres Radieux",
