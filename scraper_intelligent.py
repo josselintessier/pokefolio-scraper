@@ -39,130 +39,10 @@ HEADERS = {
 # ============================================================
 #  Mapping EN → FR
 # ============================================================
-NOMS_FR = {
-    # ---- Méga-Évolution ----
-    "Mega Evolution":     "Méga-Évolution",
-    "Phantasmal Flames":  "Flammes Fantasmagoriques",
-    "Ascended Heroes":    "Héros Transcendants",
-    "Perfect Order":      "Equilibre Parfait",
-    "Chaos Rising":       "Chaos Montant",
-
-    # ---- Écarlate et Violet ----
-    "Scarlet & Violet":        "Écarlate et Violet",
-    "Paldea Evolved":          "Évolutions à Paldea",
-    "Obsidian Flames":         "Flammes Obsidiennes",
-    "151":                     "Écarlate et Violet 151",
-    "Paradox Rift":            "Faille Paradoxe",
-    "Paldean Fates":           "Destinée de Paldea",
-    "Temporal Forces":         "Forces Temporelles",
-    "Twilight Masquerade":     "Mascarade Crépusculaire",
-    "Shrouded Fable":          "Fable Nébuleuse",
-    "Stellar Crown":           "Couronne Stellaire",
-    "Surging Sparks":          "Étincelles déferlantes",
-    "Prismatic Evolutions":    "Évolutions Prismatiques",
-    "Journey Together":        "Aventures Ensemble",
-    "Destined Rivals":         "Rivalités Destinées",
-    "Black Bolt":              "Foudre Noire",
-    "White Flare":             "Flamme Blanche",
-
-    # ---- Épée et Bouclier ----
-    "Sword & Shield":          "Épée et Bouclier",
-    "Rebel Clash":             "Clash des Rebelles",
-    "Darkness Ablaze":         "Ténèbres Embrasées",
-    "Champion's Path":         "La Voie du Maître",
-    "Vivid Voltage":           "Chants du Tonnerre",
-    "Shining Fates":           "Destinée Radieuse",
-    "Battle Styles":           "Styles de Combat",
-    "Chilling Reign":          "Règne de Glace",
-    "Evolving Skies":          "Évolution Céleste",
-    "Celebrations":            "Célébrations",
-    "Fusion Strike":           "Poing de Fusion",
-    "Brilliant Stars":         "Star Étincellantes",
-    "Astral Radiance":         "Astres Radieux",
-    "Pokemon GO":              "Pokémon GO",
-    "Lost Origin":             "Origine Perdue",
-    "Silver Tempest":          "Tempête Argentée",
-    "Crown Zenith":            "Zénith Suprême",
-
-    # ---- Soleil et Lune ----
-    "Sun & Moon":              "Soleil et Lune",
-    "Guardians Rising":        "Gardiens Ascendants",
-    "Burning Shadows":         "Ombres Ardentes",
-    "Shining Legends":         "Légendes Brillantes",
-    "Crimson Invasion":        "Invasion Carmin",
-    "Ultra Prism":             "Ultra-Prisme",
-    "Forbidden Light":         "Lumière Interdite",
-    "Celestial Storm":         "Tempête Céleste",
-    "Dragon Majesty":          "Majesté des Dragons",
-    "Lost Thunder":            "Tonnerre Perdu",
-    "Team Up":                 "Alliance Infaillible",
-    "Unbroken Bonds":          "Liens Indéfectibles",
-    "Unified Minds":           "Harmonie des Esprits",
-    "Hidden Fates":            "Destins Cachés",
-    "Cosmic Eclipse":          "Éclipse Cosmique",
-
-    # ---- XY ----
-    "XY":                      "XY",
-    "Flashfire":               "Flash Fire",
-    "Furious Fists":           "Poings Furieux",
-    "Phantom Forces":          "Forces Fantômes",
-    "Primal Clash":            "Clash des rebelles",
-    "Double Crisis":           "Double Danger",
-    "Roaring Skies":           "Cieux Rugissants",
-    "Ancient Origins":         "Origines Antiques",
-    "BREAKthrough":            "Percée",
-    "BREAKpoint":              "Point de Percée",
-    "Fates Collide":           "Destins Affrontés",
-    "Steam Siege":             "Offensive Vapeur",
-    "Evolutions":              "Évolutions",
-    "Generations":             "Générations",
-
-    # ---- Noir et Blanc ----
-    "Black & White":           "Noir et Blanc",
-    "Emerging Powers":         "Pouvoirs Émergents",
-    "Noble Victories":         "Nobles Victoires",
-    "Next Destinies":          "Destinées Futures",
-    "Dark Explorers":          "Explorateurs des Ténèbres",
-    "Dragons Exalted":         "Dragons Exaltés",
-    "Dragon Vault":            "Coffre aux Dragons",
-    "Boundaries Crossed":      "Frontières Franchies",
-    "Plasma Storm":            "Tempête Plasma",
-    "Plasma Freeze":           "Vague Plasma",
-    "Plasma Blast":            "Explosion Plasma",
-    "Legendary Treasures":     "Trésors Légendaires",
-
-    # ---- HeartGold SoulSilver ----
-    "HeartGold & SoulSilver":  "HeartGold et SoulSilver",
-    "Unleashed":               "Déchaîné",
-    "Undaunted":               "Intrépide",
-    "Triumphant":              "Triomphant",
-    "Call of Legends":         "L'Appel des Légendes",
-
-    # ---- Diamant et Perle / Platine ----
-    "Diamond & Pearl":         "Diamant et Perle",
-    "Mysterious Treasures":    "Trésors Mystérieux",
-    "Secret Wonders":          "Merveilles Secrètes",
-    "Great Encounters":        "Grandes Rencontres",
-    "Majestic Dawn":           "Aube Majestueuse",
-    "Legends Awakened":        "Éveil des Légendes",
-    "Stormfront":              "Front Orageux",
-    "Platinum":                "Platine",
-    "Rising Rivals":           "Rivaux Émergeants",
-    "Supreme Victors":         "Vainqueurs Suprêmes",
-    "Arceus":                  "Arceus",
-}
-
-SERIES_FR = {
-    "Scarlet & Violet":        "Écarlate-Violet",
-    "Sword & Shield":          "Épée-Bouclier",
-    "Mega Evolution":          "Méga-Évolution",
-    "Sun & Moon":              "Soleil-Lune",
-    "XY":                      "XY",
-    "Black & White":           "Noir-Blanc",
-    "HeartGold & SoulSilver":  "HeartGold-SoulSilver",
-    "Diamond & Pearl":         "Diamant-Perle",
-    "Platinum":                "Platine",
-}
+# Les traductions sont gérées dans la table mapping_traductions (Supabase Stats)
+# Plus besoin de dictionnaire statique ici — la base est la seule source de vérité
+NOMS_FR   = {}  # Conservé vide pour compatibilité
+SERIES_FR = {}  # Conservé vide pour compatibilité
 
 # ============================================================
 #  Helpers
@@ -329,14 +209,30 @@ def inserer_produits_episode(sb, episode, produits):
             nb_skip += 1
             continue
 
+        # Lire le mapping validé — seule source de vérité pour les traductions FR
+        nom_fr_final      = prod.get("name", "")   # Fallback EN si pas de traduction
+        edition_nom_final = episode.get("name", "")
+        serie_finale      = serie_en
+        try:
+            mapping = sb.table("mapping_traductions").select(
+                "nom_fr, edition_nom_fr, serie_fr, valide"
+            ).eq("cardmarket_id", cm_id).execute()
+            if mapping.data and mapping.data[0].get("valide"):
+                m = mapping.data[0]
+                if m.get("nom_fr"):         nom_fr_final      = m["nom_fr"]
+                if m.get("edition_nom_fr"): edition_nom_final = m["edition_nom_fr"]
+                if m.get("serie_fr"):       serie_finale      = m["serie_fr"]
+        except:
+            pass
+
         # Upsert dans produits_catalogue
         ok = upsert_produit(sb, {
             "cardmarket_id":    cm_id,
             "episode_id":       episode_id,
-            "nom_fr":           prod.get("name", ""),
+            "nom_fr":           nom_fr_final,
             "edition_code":     episode.get("code", ""),
-            "edition_nom":      NOMS_FR.get(nom_en, nom_en),
-            "serie":            SERIES_FR.get(serie_en, serie_en),
+            "edition_nom":      edition_nom_final,
+            "serie":            serie_finale,
             "type_produit":     detecter_type(prod.get("name", "")),
             "langue":           "FR",
             "date_sortie_fr":   episode.get("released_at"),
@@ -346,6 +242,9 @@ def inserer_produits_episode(sb, episode, produits):
 
         if not ok:
             continue
+
+        # Mettre à jour le mapping de traductions
+        upsert_mapping(sb, episode, prod, cm_id)
 
         # Insérer prix — UNIQUEMENT avec prix_fr
         try:
@@ -378,6 +277,48 @@ def inserer_produits_episode(sb, episode, produits):
 # ============================================================
 #  Priorités par édition
 # ============================================================
+def upsert_mapping(sb, episode, prod, cm_id):
+    """
+    Insère dans mapping_traductions si pas encore présent (données EN brutes).
+    Si déjà présent et valide=True → intouchable (traduction validée manuellement).
+    Si valide=False → mise à jour des données EN uniquement.
+    """
+    nom_en   = prod.get("name", "")
+    serie_en = (episode.get("series") or {}).get("name", "")
+
+    try:
+        existant = sb.table("mapping_traductions").select(
+            "cardmarket_id, valide"
+        ).eq("cardmarket_id", cm_id).execute()
+
+        if existant.data:
+            # Ne toucher que si pas encore validé
+            if not existant.data[0].get("valide"):
+                sb.table("mapping_traductions").update({
+                    "nom_en":         nom_en,
+                    "edition_code":   episode.get("code", ""),
+                    "edition_nom_en": episode.get("name", ""),
+                    "serie_en":       serie_en,
+                    "type_produit":   detecter_type(nom_en),
+                }).eq("cardmarket_id", cm_id).execute()
+        else:
+            # Nouveau produit — insérer en anglais, non validé
+            sb.table("mapping_traductions").insert({
+                "cardmarket_id":  cm_id,
+                "nom_en":         nom_en,
+                "nom_fr":         None,
+                "edition_code":   episode.get("code", ""),
+                "edition_nom_en": episode.get("name", ""),
+                "edition_nom_fr": None,
+                "serie_en":       serie_en,
+                "serie_fr":       None,
+                "type_produit":   detecter_type(nom_en),
+                "valide":         False,
+            }).execute()
+    except Exception as e:
+        pass  # Silencieux — le mapping est secondaire
+
+
 def score_edition(episode, dernieres_maj_prix_fr, episodes_en_base):
     """
     Score basé sur la présence ou l'ancienneté du prix_fr.
