@@ -27,8 +27,8 @@ API_BASE      = f"https://{RAPIDAPI_HOST}"
 SUPABASE_URL  = os.environ.get("SUPABASE_URL_STATS", "")
 SUPABASE_KEY  = os.environ.get("SUPABASE_KEY_STATS", "")
 
-BUDGET_TOTAL = 60
-DELAI_APPELS = 2
+BUDGET_TOTAL = 40
+DELAI_APPELS = 5
 
 HEADERS = {
     "Content-Type":    "application/json",
