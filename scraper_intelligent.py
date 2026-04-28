@@ -27,8 +27,19 @@ API_BASE      = f"https://{RAPIDAPI_HOST}"
 SUPABASE_URL  = os.environ.get("SUPABASE_URL_STATS", "")
 SUPABASE_KEY  = os.environ.get("SUPABASE_KEY_STATS", "")
 
-BUDGET_TOTAL = 40
-DELAI_APPELS = 5
+BUDGET_TOTAL = 40  # Limite quotidienne
+
+# Éditions à ignorer définitivement — pas de produits scellés avec prix_fr
+BLACKLIST_KEYWORDS = [
+    "black star promo", "mcdonald", "futsal", "rumble",
+    "pop series", "kalos starter", "pokemon products",
+]
+
+def est_blackliste(nom_episode):
+    """Retourne True si l'édition ne contiendra jamais de prix_fr."""
+    nom = nom_episode.lower()
+    return any(kw in nom for kw in BLACKLIST_KEYWORDS)
+DELAI_APPELS = 6
 
 HEADERS = {
     "Content-Type":    "application/json",
@@ -116,12 +127,17 @@ def charger_etat(sb):
                 etat["dernieres_maj"] = json.loads(etat["dernieres_maj"])
             elif not etat.get("dernieres_maj"):
                 etat["dernieres_maj"] = {}
+            if isinstance(etat.get("echecs_sans_prix_fr"), str):
+                etat["echecs_sans_prix_fr"] = json.loads(etat["echecs_sans_prix_fr"])
+            elif not etat.get("echecs_sans_prix_fr"):
+                etat["echecs_sans_prix_fr"] = {}
             return etat
     except Exception as e:
         print(f"  Erreur chargement état: {e}")
     return {
         "id": 1, "appels_aujourd_hui": 0,
         "date_compteur": str(date.today()), "dernieres_maj": {},
+        "echecs_sans_prix_fr": {},  # {episode_id: nb_echecs}
     }
 
 def sauvegarder_etat(sb, etat):
@@ -319,26 +335,43 @@ def upsert_mapping(sb, episode, prod, cm_id):
         pass  # Silencieux — le mapping est secondaire
 
 
-def score_edition(episode, dernieres_maj_prix_fr, episodes_en_base):
+def score_edition(episode, dernieres_maj_prix_fr, episodes_en_base, echecs={}):
     """
     Score basé sur la présence ou l'ancienneté du prix_fr.
-    Une édition sans aucun prix_fr est prioritaire sur tout.
+    - Éditions blacklistées (promos, McD...) → ignorées définitivement
+    - Éditions avec 3+ échecs sans prix_fr   → ignorées (pas de prix FR disponible)
+    - Éditions sans prix_fr récent           → priorité haute
     """
+    nom = episode.get("name", "")
+
+    # Ignorer définitivement les éditions blacklistées
+    if est_blackliste(nom):
+        return -2
+
     eid      = str(episode["id"])
     derniere = dernieres_maj_prix_fr.get(eid)
-    score    = 0
 
+    # Ignorer si trop d'échecs consécutifs sans prix_fr (>= 3 tentatives)
+    nb_echecs = echecs.get(eid, 0)
+    if nb_echecs >= 3:
+        return -2  # Ignoré définitivement jusqu'à reset manuel
+
+    score = 0
     if not derniere:
         score += 100  # Jamais eu de prix_fr
     else:
         try:
             jours = (date.today() - date.fromisoformat(derniere)).days
-            if jours == 0:   return -1  # MAJ prix_fr faite aujourd'hui
+            if jours == 0:   return -1  # MAJ faite aujourd'hui
             elif jours > 7:  score += 50
             elif jours > 3:  score += 25
             else:            score += 10
         except:
             score += 100
+
+    # Ignorer si pas de code (éditions génériques comme "Pokémon products")
+    if not episode.get("code"):
+        return -2
 
     status = get_print_status(episode.get("released_at", ""))
     if status == "en_impression":   score += 30
@@ -418,16 +451,20 @@ def main():
     print(f"\n[2/3] Priorités (basées sur prix_fr uniquement)...")
     dernieres_maj = get_dernieres_maj_avec_prix_fr(sb)
 
+    echecs = etat.get("echecs_sans_prix_fr", {})
     episodes_tries = sorted(
         episodes,
-        key=lambda e: score_edition(e, dernieres_maj, episodes_en_base),
+        key=lambda e: score_edition(e, dernieres_maj, episodes_en_base, echecs),
         reverse=True
     )
 
+    nb_ignores = sum(1 for e in episodes if score_edition(e, dernieres_maj, episodes_en_base, echecs) == -2)
+    print(f"  {nb_ignores} éditions ignorées définitivement (blacklist ou trop d\'échecs)")
     print("  Top 5 :")
     for ep in episodes_tries[:5]:
-        s   = score_edition(ep, dernieres_maj, episodes_en_base)
-        nom = NOMS_FR.get(ep["name"], ep["name"])
+        s   = score_edition(ep, dernieres_maj, episodes_en_base, echecs)
+        if s < 0: continue
+        nom = ep["name"]
         maj = dernieres_maj.get(str(ep["id"]), "jamais")
         print(f"    [{s:3}pts] {nom[:35]:35} — MAJ prix_fr: {maj}")
 
@@ -443,8 +480,8 @@ def main():
             print(f"  Budget atteint — {ep_ok} éditions traitées")
             break
 
-        s   = score_edition(episode, dernieres_maj, episodes_en_base)
-        nom = NOMS_FR.get(episode["name"], episode["name"])
+        s   = score_edition(episode, dernieres_maj, episodes_en_base, echecs)
+        nom = episode["name"]
 
         if s < 0 or s <= 3:
             ep_skip += 1
@@ -473,10 +510,15 @@ def main():
 
         if nb > 0:
             dernieres_maj[str(episode["id"])] = str(date.today())
+            echecs[str(episode["id"])] = 0  # Reset échecs si succès
             print(f"{nb}/{len(produits)} avec prix_fr ✓ ({appels_effectues}/{BUDGET_TOTAL})")
             ep_ok += 1
         else:
-            print(f"0 prix_fr disponible pour cette édition")
+            # Incrémenter le compteur d'échecs
+            eid_str = str(episode["id"])
+            echecs[eid_str] = echecs.get(eid_str, 0) + 1
+            nb_echecs_total = echecs[eid_str]
+            print(f"0 prix_fr — échec {nb_echecs_total}/3 {'(sera ignoré désormais)' if nb_echecs_total >= 3 else ''}")
             ep_skip += 1
 
     # ---- Résumé ----
@@ -487,9 +529,10 @@ def main():
     print(f"  Appels utilisés       : {appels_effectues}/{BUDGET_TOTAL}")
     print(f"  Budget restant        : {BUDGET_TOTAL - appels_effectues}")
 
-    etat["appels_aujourd_hui"] = appels_effectues
-    etat["date_compteur"]      = str(date.today())
-    etat["dernieres_maj"]      = dernieres_maj
+    etat["appels_aujourd_hui"]    = appels_effectues
+    etat["date_compteur"]         = str(date.today())
+    etat["dernieres_maj"]         = dernieres_maj
+    etat["echecs_sans_prix_fr"]   = echecs
     sauvegarder_etat(sb, etat)
     print("État sauvegardé ✓")
 
