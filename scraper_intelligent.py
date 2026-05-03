@@ -39,7 +39,7 @@ def est_blackliste(nom_episode):
     """Retourne True si l'édition ne contiendra jamais de prix_fr."""
     nom = nom_episode.lower()
     return any(kw in nom for kw in BLACKLIST_KEYWORDS)
-DELAI_APPELS = 6
+DELAI_APPELS = 2
 
 HEADERS = {
     "Content-Type":    "application/json",
@@ -143,11 +143,12 @@ def charger_etat(sb):
 def sauvegarder_etat(sb, etat):
     try:
         sb.table("scraper_etat").upsert({
-            "id":                 1,
-            "appels_aujourd_hui": etat["appels_aujourd_hui"],
-            "date_compteur":      etat["date_compteur"],
-            "dernieres_maj":      json.dumps(etat.get("dernieres_maj", {})),
-            "derniere_execution": datetime.now().isoformat(),
+            "id":                    1,
+            "appels_aujourd_hui":    etat["appels_aujourd_hui"],
+            "date_compteur":         etat["date_compteur"],
+            "dernieres_maj":         json.dumps(etat.get("dernieres_maj", {})),
+            "echecs_sans_prix_fr":   json.dumps(etat.get("echecs_sans_prix_fr", {})),
+            "derniere_execution":    datetime.now().isoformat(),
         }).execute()
     except Exception as e:
         print(f"  Erreur sauvegarde état: {e}")
