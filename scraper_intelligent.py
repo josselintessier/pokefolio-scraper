@@ -39,7 +39,7 @@ def est_blackliste(nom_episode):
     """Retourne True si l'édition ne contiendra jamais de prix_fr."""
     nom = nom_episode.lower()
     return any(kw in nom for kw in BLACKLIST_KEYWORDS)
-DELAI_APPELS = 2
+DELAI_APPELS = 3
 
 HEADERS = {
     "Content-Type":    "application/json",
@@ -503,7 +503,10 @@ def main():
         produits = [p for p in data_prod.get("data", []) if p.get("cardmarket_id")]
 
         if not produits:
-            print("aucun produit")
+            eid_str = str(episode["id"])
+            echecs[eid_str] = echecs.get(eid_str, 0) + 1
+            nb_echecs_total = echecs[eid_str]
+            print(f"aucun produit — échec {nb_echecs_total}/3 {'(sera ignoré désormais)' if nb_echecs_total >= 3 else ''}")
             ep_skip += 1
             continue
 
