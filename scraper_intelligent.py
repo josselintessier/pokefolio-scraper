@@ -39,7 +39,7 @@ def est_blackliste(nom_episode):
     """Retourne True si l'édition ne contiendra jamais de prix_fr."""
     nom = nom_episode.lower()
     return any(kw in nom for kw in BLACKLIST_KEYWORDS)
-DELAI_APPELS = 3
+DELAI_APPELS = 2
 
 HEADERS = {
     "Content-Type":    "application/json",
@@ -336,53 +336,31 @@ def upsert_mapping(sb, episode, prod, cm_id):
         pass  # Silencieux — le mapping est secondaire
 
 
-def score_edition(episode, dernieres_maj_prix_fr, episodes_en_base, echecs={}):
+def est_eligible(episode, echecs):
     """
-    Score basé sur la présence ou l'ancienneté du prix_fr.
-    - Éditions blacklistées (promos, McD...) → ignorées définitivement
-    - Éditions avec 3+ échecs sans prix_fr   → ignorées (pas de prix FR disponible)
-    - Éditions sans prix_fr récent           → priorité haute
+    Retourne False si l'édition doit être ignorée définitivement.
+    - Blacklistée ou sans code → False
+    - 3+ échecs sans prix_fr  → False
     """
-    nom = episode.get("name", "")
+    if est_blackliste(episode.get("name", "")) or not episode.get("code"):
+        return False
+    if echecs.get(str(episode["id"]), 0) >= 3:
+        return False
+    return True
 
-    # Ignorer définitivement les éditions blacklistées
-    if est_blackliste(nom):
-        return -2
 
+def cle_tri(episode, dernieres_maj_prix_fr):
+    """
+    Clé de tri pour le round-robin :
+    - Jamais mis à jour → en premier (date minimale)
+    - Sinon → date de dernière MAJ croissante (le plus ancien passe en premier)
+    - Puis episode_id pour départager les ex-aequo
+    """
     eid      = str(episode["id"])
     derniere = dernieres_maj_prix_fr.get(eid)
-
-    # Ignorer si trop d'échecs consécutifs sans prix_fr (>= 3 tentatives)
-    nb_echecs = echecs.get(eid, 0)
-    if nb_echecs >= 3:
-        return -2  # Ignoré définitivement jusqu'à reset manuel
-
-    score = 0
     if not derniere:
-        score += 100  # Jamais eu de prix_fr
-    else:
-        try:
-            jours = (date.today() - date.fromisoformat(derniere)).days
-            if jours == 0:   return -1  # MAJ faite aujourd'hui
-            elif jours > 7:  score += 50
-            elif jours > 3:  score += 25
-            else:            score += 10
-        except:
-            score += 100
-
-    # Ignorer si pas de code (éditions génériques comme "Pokémon products")
-    if not episode.get("code"):
-        return -2
-
-    status = get_print_status(episode.get("released_at", ""))
-    if status == "en_impression":   score += 30
-    elif status == "arret_annonce": score += 20
-    else:                           score += 5
-
-    if episode.get("prices", {}).get("cardmarket", {}).get("total", 0) > 0:
-        score += 10
-
-    return score
+        return ("0000-01-01", episode["id"])  # Jamais MAJ → priorité absolue
+    return (derniere, episode["id"])
 
 # ============================================================
 #  Main
@@ -453,21 +431,22 @@ def main():
     dernieres_maj = get_dernieres_maj_avec_prix_fr(sb)
 
     echecs = etat.get("echecs_sans_prix_fr", {})
-    episodes_tries = sorted(
-        episodes,
-        key=lambda e: score_edition(e, dernieres_maj, episodes_en_base, echecs),
-        reverse=True
+
+    # Filtrer les éligibles puis trier par date de dernière MAJ croissante
+    episodes_eligibles = [e for e in episodes if est_eligible(e, echecs)]
+    episodes_ignores   = [e for e in episodes if not est_eligible(e, echecs)]
+    episodes_tries     = sorted(
+        episodes_eligibles,
+        key=lambda e: cle_tri(e, dernieres_maj)
     )
 
-    nb_ignores = sum(1 for e in episodes if score_edition(e, dernieres_maj, episodes_en_base, echecs) == -2)
-    print(f"  {nb_ignores} éditions ignorées définitivement (blacklist ou trop d\'échecs)")
-    print("  Top 5 :")
+    print(f"  {len(episodes_ignores)} éditions ignorées définitivement (blacklist ou trop d\'échecs)")
+    print(f"  {len(episodes_tries)} éditions éligibles — ordre par date de MAJ")
+    print("  Prochaines 5 :")
     for ep in episodes_tries[:5]:
-        s   = score_edition(ep, dernieres_maj, episodes_en_base, echecs)
-        if s < 0: continue
         nom = ep["name"]
         maj = dernieres_maj.get(str(ep["id"]), "jamais")
-        print(f"    [{s:3}pts] {nom[:35]:35} — MAJ prix_fr: {maj}")
+        print(f"    {nom[:40]:40} — dernière MAJ: {maj}")
 
     # ---- Étape 3 : Scraping ----
     budget = BUDGET_TOTAL - appels_effectues
@@ -481,12 +460,7 @@ def main():
             print(f"  Budget atteint — {ep_ok} éditions traitées")
             break
 
-        s   = score_edition(episode, dernieres_maj, episodes_en_base, echecs)
         nom = episode["name"]
-
-        if s < 0 or s <= 3:
-            ep_skip += 1
-            continue
 
         print(f"  [{s:3}pts] {nom[:40]}", end=" → ")
 
