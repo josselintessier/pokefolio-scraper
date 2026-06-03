@@ -462,7 +462,8 @@ def main():
 
         nom = episode["name"]
 
-        print(f"  [{s:3}pts] {nom[:40]}", end=" → ")
+        maj = dernieres_maj.get(str(episode["id"]), "jamais")
+        print(f"  {nom[:40]:40} (MAJ: {maj})", end=" → ")
 
         data_prod = appel_api(
             f"pokemon/episodes/{episode['id']}/products",
